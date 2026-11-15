@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# il template non contiene segreti: tienilo nel repo per i contributori
+!.env.example
+
 # vercel
 .vercel
 
