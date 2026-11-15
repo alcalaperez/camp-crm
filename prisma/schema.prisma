@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("STAFF") // ADMIN, STAFF
+  createdAt DateTime @default(now())
+  payments  Payment[]
+}
+
+model Event {
+  id            String         @id @default(cuid())
+  name          String
+  year          Int
+  startDate     DateTime
+  endDate       DateTime
+  location      String         @default("")
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+
+  // Quote a partecipante. Sconto a scalare sui campisti per ordine di iscrizione:
+  // priceKid1 = 1° campista, priceKid2 = 2°, priceKid3 = 3°, priceKid4Plus = dal 4° in poi.
+  priceAdult    Float          @default(0)
+  priceKid1     Float          @default(0)
+  priceKid2     Float          @default(0)
+  priceKid3     Float          @default(0)
+  priceKid4Plus Float          @default(0)
+
+  // Regolamento del camp, modificabile dagli amministratori.
+  // Mostrato nel modulo di iscrizione per l'accettazione obbligatoria.
+  rules         String         @default("")
+
+  // Numero massimo di partecipanti (adulti + campisti) sommati su tutte le
+  // iscrizioni non cancellate. null = illimitato.
+  participantLimit Int?
+
+  registrations Registration[]
+  expenses      Expense[]
+  incomes       Income[]
+}
+
+model Registration {
+  id                   String   @id @default(cuid())
+  eventId              String
+  event                Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  // Il sottoscritto — la persona che compila il modulo (genitore/tutore o adulto che si iscrive da solo)
+  sottoscrittoFirstName String
+  sottoscrittoLastName  String
+  sottoscrittoTaxId     String   // Codice Fiscale
+  sottoscrittoPhone     String   @default("")
+  sottoscrittoEmail     String   @default("")
+
+  // Indirizzo
+  street      String @default("") // Via
+  postalCode  String @default("") // CAP
+  city        String @default("") // Città
+
+  status    String   @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  notes     String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Giorni di permanenza dichiarati all'arrivo (scheda alloggiati, max 30).
+  // null = non dichiarato.
+  stayDays Int?
+
+  // Consensi obbligatori al momento dell'iscrizione.
+  privacyConsent Boolean @default(false)
+  rulesConsent   Boolean @default(false)
+  // Traccia del consenso privacy (GDPR art. 7): quando è stato prestato e
+  // quale versione dell'informativa è stata accettata.
+  privacyConsentAt     DateTime?
+  privacyPolicyVersion String?
+
+  // Token opaco per autorizzare l'upload dei documenti dal form pubblico
+  // (dove non c'è sessione di login). 256 bit casuali, non è una password:
+  // è una capability. Lo staff autenticato bypassa questo controllo.
+  uploadToken String @unique
+
+  participants Participant[]
+  payments     Payment[]
+}
+
+model Participant {
+  id             String   @id @default(cuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+
+  role      String // ADULT | KID
+  firstName String
+  lastName  String
+  birthDate String // stored as string (format DD/MM/YYYY)
+  taxId     String @default("") // Codice Fiscale del partecipante
+  // Cittadinanza del partecipante (denominazione dello Stato, es. ITALIA).
+  nationality String @default("")
+  // Luogo di nascita: comune italiano o Stato estero (scheda alloggiati).
+  birthPlace String @default("")
+  // Sesso (scheda alloggiati): M | F. Vuoto = non specificato.
+  sex String @default("")
+  notes     String @default("") // allergie, info utili, ecc.
+
+  // Documento d'identità scansionato (un file per partecipante)
+  idDocumentPath       String?   // nome file generato sul disco
+  idDocumentName       String?   // nome file originale (per display/download)
+  idDocumentMime       String?   // mime type, per servire il file
+  idDocumentSize       Int?      // dimensione in byte
+  idDocumentUploadedAt DateTime?
+
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id             String       @id @default(cuid())
+  registrationId String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  amount         Float        @default(0)
+  paid           Boolean      @default(false)
+  paymentMethod  String       @default("CONTANTI") // CONTANTI, BONIFICO, CARTA, SCONTO
+  paymentDate    DateTime?
+  recordedById   String
+  recordedBy     User         @relation(fields: [recordedById], references: [id])
+  notes          String       @default("")
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+// Spesa custom del camp (bolletta/uscita): cibo, trasporti, struttura, ecc.
+model Expense {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  title     String
+  // Categoria per raggruppare i costi (CIBO, TRASPORTI, STRUTTURA, ...).
+  category  String   @default("GENERALE")
+  amount    Float
+  date      DateTime @default(now())
+  notes     String   @default("")
+
+  createdAt DateTime @default(now())
+}
+
+// Entrata extra del camp (non proveniente da quote partecipanti):
+// donazioni, contributi, sovvenzioni, rimborsi, ecc.
+model Income {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  title     String
+  // Origine dell'entrata (DONAZIONE, CONTRIBUTO, SOVENZIONE, ...).
+  source    String   @default("ALTRO")
+  amount    Float
+  date      DateTime @default(now())
+  notes     String   @default("")
+
+  createdAt DateTime @default(now())
+}

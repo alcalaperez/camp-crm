@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Next.js
+/.next/
+/out/
+
+# Build
+/build
+
+# Database (persisted via volume, non copiare il dev.db locale)
+/prisma/dev.db
+/dev.db
+*.db
+
+# Env files (set via docker-compose o env vars)
+.env
+.env.*
+!.env.example
+
+# Generated Prisma client (rigenerato nel container)
+/src/generated/prisma
+
+# Misc
+.DS_Store
+*.pem
+npm-debug.log*
+.git
+.gitignore
+*.md

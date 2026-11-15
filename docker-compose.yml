@@ -1,0 +1,56 @@
+services:
+  camp-crm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: camp-crm
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persiste il database SQLite
+      - camp-data:/app/data
+      # ── Documenti caricati su un disco esterno (es. HDD) ──────────────
+      # Mappa una cartella dell'host (il tuo HDD) a /app/uploads dentro il
+      # container e imposta UPLOADS_DIR di conseguenza. I file caricati dallo
+      # staff finiscono qui e sopravvivono ai riavvii.
+      # Esempio (decommenta e adatta il percorso dell'host):
+      # - /mnt/mio-hdd/camp-uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - AUTH_SECRET=cambia-questo-con-una-stringa-lunga-e-casuale
+      - AUTH_URL=http://localhost:3000
+      - DATABASE_URL=file:./data/dev.db
+      # Chiave di cifratura documenti a riposo (AES-256-GCM).
+      # Genera con: openssl rand -base64 32
+      # NON perderla o tutti i documenti diventano illeggibili. Tienila fuori
+      # dal volume dei dati e DAL REPO: definiscila in .env (o nell'ambiente
+      # della shell) — compose la interpola da lì. Dopo il primo deploy esegui
+      # la migrazione una tantum:
+      #   docker compose exec camp-crm npm run encrypt:migrate
+      - DOCUMENT_ENCRYPTION_KEY=${DOCUMENT_ENCRYPTION_KEY:?imposta la chiave in .env o nell'ambiente (openssl rand -base64 32)}
+      # ── Privacy / GDPR ──────────────────────────────────────────
+      # Titolare del trattamento e contatto (mostrati in /privacy).
+      - DATA_CONTROLLER_NAME=Mario Rossi
+      - DATA_CONTROLLER_EMAIL=privacy@tuodominio.it
+      # Periodo di conservazione dei dati (mesi) dopo la fine dell'evento.
+      # Lo script npm run retention:purge cancella i dati più vecchi.
+      - RETENTION_MONTHS=24
+      # ── Credenziali iniziali (opzionali, con valori di default) ──────
+      # Cambia questi valori per personalizzare admin/staff al primo avvio.
+      # Vengono usati SOLO se l'utente non esiste già nel DB; il seed non
+      # sovrascrive utenti esistenti. Per cambiarli su un DB già inizializzato
+      # devi cancellare il volume (docker compose down -v) o gli utenti dal DB.
+      # - SEED_ADMIN_EMAIL=admin@camp.it
+      # - SEED_ADMIN_NAME=Amministratore
+      # - SEED_ADMIN_PASSWORD=admin123
+      # - SEED_STAFF_EMAIL=staff@camp.it
+      # - SEED_STAFF_NAME=Operatore
+      # - SEED_STAFF_PASSWORD=staff123
+      # Cartella di salvataggio dei documenti. Di default usa /app/data/uploads
+      # (dentro il volume camp-data). Se bind-monti un HDD (vedi sopra),
+      # imposta UPLOADS_DIR=/app/uploads.
+      # - UPLOADS_DIR=/app/uploads
+    restart: unless-stopped
+
+volumes:
+  camp-data:

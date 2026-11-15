@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/*
+ * Tema chiaro fisso.
+ * L'app usa componenti disegnati per il tema chiaro (schede bianche, testo
+ * zinc-*). Supportare il dark mode richiederebbe una variante per ogni
+ * componente, quindi forziamo il tema chiaro a prescindere dalle preferenze
+ * di sistema: niente più testo bianco su sfondo bianco (o scuro su scuro).
+ */
+:root {
+  --background: #fafafa; /* zinc-50, uguale al bg-zinc-50 del body */
+  --foreground: #18181b; /* zinc-900 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* Usa il font Geist caricato nel layout; fallback generoso. */
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
+    Roboto, Arial, sans-serif;
+}
